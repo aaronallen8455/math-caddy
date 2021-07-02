@@ -1,0 +1,115 @@
+body {
+  font-family: Verdana, sans-serif;
+  background-color: #8fa4a2;
+}
+
+div.side-menu-wrapper {
+  width: 400px;
+  height: 100%;
+  position: fixed;
+  top: 0;
+  left: calc(100% - 20px);
+  transition: left .3s;
+}
+
+div.side-menu-wrapper:hover {
+  transition: left .3s;
+  left: calc(100% - 400px);
+}
+
+div.menu-tab, div.menu-body {
+  z-index: 3;
+  background-color: #ddd;
+  box-shadow: -5px 5px 10px #00000096;
+}
+
+div.menu-tab {
+  position: absolute;
+  left: -25px;
+  top: 80px;
+  font-size: 2em;
+  width: 1.2em;
+  height: 1.2em;
+  line-height: 1em;
+  text-align: center;
+  border-radius: 10px;
+}
+
+div.menu-body {
+  height: 100%;
+  padding: 30px;
+}
+
+div.entries {
+  padding-right: 40px;
+}
+
+div.entry {
+  border-radius: 10px;
+  padding: 5px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.lemma-entry {
+  background-color: #c2d9ff;
+}
+
+.theorem-entry {
+  background-color: #ffd6c2;
+}
+
+.definition-entry {
+  background-color: #e5ffc2;
+}
+
+.corollary-entry {
+  background-color: #e5c2ff;
+}
+
+.proposition-entry {
+  background-color: #ffc2ea;
+}
+
+div.entry {
+  position: relative;
+}
+
+div.entry-edit {
+  position: absolute;
+  right: 10px;
+  top: 5px;
+  width: 1em;
+  height: 1em;
+  color: grey;
+  font-size: 1.3em;
+  cursor: pointer;
+}
+
+.entry-edit:hover {
+  color: black;
+}
+
+p.entry-body {
+  border-radius: 5px;
+  background-color: #ffffff96;
+  padding: 5px;
+}
+
+div.entry-field {
+  display: flex;
+  font-size: .8em;
+}
+
+span.field-name {
+  font-weight: bold;
+  width: 100px;
+}
+
+h4 {
+  margin: 5px 0;
+}
+
+p {
+  margin: 10px 0;
+}

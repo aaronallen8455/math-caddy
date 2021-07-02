@@ -1,0 +1,25 @@
+name: common
+version: 0.1
+cabal-version: >= 1.2
+build-type: Simple
+
+library
+  hs-source-dirs: src
+  build-depends: base
+               , obelisk-route
+               , mtl
+               , text
+               , time
+               , universe
+               , lens
+               , categories
+               , containers
+               , sqlite-simple
+               , aeson
+  exposed-modules:
+    Common.Api
+    Common.Route
+  ghc-options: -Wall -Wredundant-constraints -Wincomplete-uni-patterns -Wincomplete-record-updates -O -fno-show-valid-hole-fits
+  default-extensions:
+    LambdaCase
+    OverloadedStrings

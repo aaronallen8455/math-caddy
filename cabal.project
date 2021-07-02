@@ -1,0 +1,6 @@
+optional-packages:
+  *
+write-ghc-environment-files: never
+
+package *
+  ghc-options: -Wall

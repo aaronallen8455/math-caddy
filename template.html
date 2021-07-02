@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Math Caddy</title>
+    <link rel="stylesheet" type="text/css" href="static/main.css" />
+    <script type="text/javascript" id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+  </head>
+  <body>
+    <div class="top-menu">
+      <button>Add Entry</button>
+    </div>
+    <div class="entries">
+      <div class="entry theorem-entry">
+
+        <div class="entry-edit">&#9998;</div>
+
+        <h4>Title</h2>
+        <p class="entry-body">Here is the body of the theorem...</p>
+
+        <div class="entry-field">
+          <span class="field-name">Type</span>
+          <span class="field-value">Theorem</span>
+        </div>
+
+        <div class="entry-field">
+          <span class="field-name">Categories</span>
+          <span class="field-value">this, that, other</span>
+        </div>
+
+        <div class="entry-field">
+          <span class="field-name">Reference</span>
+          <span class="field-value">Algebra Chapter 0, page 210</span>
+        </div>
+
+        <div class="entry-field">
+          <span class="field-name">Results from</span>
+          <span class="field-value">this, that, other</span>
+        </div>
+      </div>
+
+      <div class="entry lemma-entry">
+        <h4>Title</h2>
+        <p>Here is the body of the lemma...</p>
+      </div>
+      <div class="entry definition-entry">
+        <h4>Title</h2>
+        <p>Here is the body of the definition...</p>
+      </div>
+    </div>
+
+    <div class="side-menu-wrapper">
+      <div class="menu-tab">&#9776;</div>
+      <div class="menu-body">
+        <h3>Categories</h3>
+        <div class="category-filter">
+          <input type="checkbox" id="group-input" />
+          <label for="group-input">Group</label>
+        </div>
+        <div class="category-filter">
+          <input type="checkbox" id="set-input" />
+          <label for="set-input">Set</label>
+        </div>
+        <h3>Types</h3>
+        <div class="type-filter">
+          <input type="checkbox" id="theorem-type-input" />
+          <label for="theorem-type-input">Theorem</label>
+        </div>
+        <div class="type-filter">
+          <input type="checkbox" id="definition-type-input" />
+          <label for="definition-type-input">Definition</label>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+
