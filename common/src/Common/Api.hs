@@ -19,9 +19,11 @@ module Common.Api
   , HasId
   , NoId
   , partitionCats
+  , entryTypeToText
+  , PageSize
+  , Needle
   ) where
 
-import           Control.Lens (Wrapped)
 import           Data.Aeson
 import           Data.Int (Int64)
 import           Data.Kind (Type)
@@ -34,6 +36,8 @@ import qualified Database.SQLite.Simple.ToField as DB
 import           GHC.Generics (Generic)
 
 type EntryName = T.Text
+type PageSize = Int
+type Needle = T.Text
 
 data IdOpt = MbId | HasId | NoId
 
@@ -58,6 +62,8 @@ data Entry (k :: IdOpt) (cat :: IdOpt) =
     -- , entryResultFrom :: [(EntryName, EntryId)] TODO
     } deriving stock Generic
 
+deriving instance (Show (IdField k EntryId), Show (Category cat)) => Show (Entry k cat)
+
 deriving anyclass instance
   (ToJSON (IdField k EntryId), ToJSON (Category cat))
     => ToJSON (Entry k cat)
@@ -72,7 +78,7 @@ data EntryType
   | Definition
   | Corollary
   | Proposition
-  deriving stock (Eq, Show, Read, Bounded, Enum, Ord, Generic)
+  deriving stock (Eq, Show, Bounded, Enum, Ord, Generic)
   deriving anyclass (Universe, ToJSON, FromJSON)
 
 instance DB.FromField EntryType where
@@ -85,29 +91,32 @@ instance DB.FromField EntryType where
           "definition"  -> pure Definition
           "corollary"   -> pure Corollary
           "proposition" -> pure Proposition
-          _             -> fail "unkown category"
+          _             -> fail "unkown entry type"
       fromSqlData _ = fail "expected sql text"
 
 instance DB.ToField EntryType where
-  toField = DB.SQLText . \case
-    Theorem     -> "theorem"
-    Lemma       -> "lemma"
-    Definition  -> "definition"
-    Corollary   -> "corollary"
-    Proposition -> "proposition"
+  toField = DB.SQLText . entryTypeToText
+
+entryTypeToText :: EntryType -> T.Text
+entryTypeToText = \case
+  Theorem     -> "theorem"
+  Lemma       -> "lemma"
+  Definition  -> "definition"
+  Corollary   -> "corollary"
+  Proposition -> "proposition"
 
 newtype EntryId =
   EntryId { unEntryId :: Int64 }
   deriving stock (Eq, Show, Ord, Generic)
-  deriving newtype (DB.ToField, DB.FromField, ToJSON, FromJSON)
-
-deriving anyclass instance Wrapped EntryId
+  deriving newtype (DB.ToField, DB.FromField, ToJSON, FromJSON, Integral, Real, Enum, Num)
 
 data Category (k :: IdOpt) =
   Category
     { categoryId   :: IdField k CategoryId
     , categoryName :: T.Text
     } deriving stock Generic
+
+deriving instance Show (IdField k CategoryId) => Show (Category k)
 
 partitionCats :: [Category MbId] -> ([Category HasId], [Category NoId])
 partitionCats = foldr go ([], []) where
@@ -125,6 +134,4 @@ deriving anyclass instance
 newtype CategoryId =
   CategoryId { unCategoryId :: Int64 }
   deriving stock (Eq, Show, Generic, Ord)
-  deriving newtype (DB.ToField, DB.FromField, ToJSON, FromJSON)
-
-deriving anyclass instance Wrapped CategoryId
+  deriving newtype (DB.ToField, DB.FromField, ToJSON, FromJSON, Integral, Real, Enum, Num)

@@ -14,11 +14,21 @@ library
                , obelisk-executable-config-lookup
                , obelisk-generated-static
                , text
+               , modern-uri
+               , containers
+               , bytestring
   exposed-modules:
     Frontend
+  other-modules:
+    Frontend.Async
+    Frontend.Model
+    Frontend.Model.Entries
+    Frontend.Model.Filter
+    Frontend.Routing
   ghc-options: -Wall -Wredundant-constraints -Wincomplete-uni-patterns -Wincomplete-record-updates -O -fno-show-valid-hole-fits
   default-extensions:
     LambdaCase
+    OverloadedStrings
 
 executable frontend
   main-is: main.hs

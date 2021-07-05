@@ -35,6 +35,8 @@ createTablesIfNotExist =
     DB.execute_ conn
       $ "CREATE TABLE IF NOT EXISTS " <> entryToCatTable
       <> " (Id INTEGER PRIMARY KEY, \
-         \FOREIGN KEY(EntryId) NOT NULL REFERENCES entries(Id) ON DELETE CASCADE, \
-         \FOREIGN KEY(CategoryId) NOT NULL REFERENCES categories(Id) ON DELETE CASCADE, \
+         \EntryId INTEGER NOT NULL, \
+         \CategoryId INTEGER NOT NULL, \
+         \FOREIGN KEY(EntryId) REFERENCES entries(Id) ON DELETE CASCADE, \
+         \FOREIGN KEY(CategoryId) REFERENCES categories(Id) ON DELETE CASCADE, \
          \UNIQUE (EntryId, CategoryId))"
