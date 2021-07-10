@@ -15,14 +15,16 @@ import           Common.Api
 type EntryMap = M.Map EntryId (Entry HasId HasId)
 
 data M =
-  M { entries :: EntryMap
-    , editorStatus :: EditorStatus
+  M { entries :: !EntryMap
+    , editorStatus :: !EditorStatus
+    , waitingForMore :: !Bool
     } deriving Show
 
 initModel :: M
 initModel =
   M { entries = mempty
     , editorStatus = NotEditing
+    , waitingForMore = False
     }
 
 data EditorStatus
@@ -37,10 +39,12 @@ data Ev
   | DeleteEntry EntryId
   | EditEntry EntryId
   | CreateNewEntry
-  | ReqSaveNewEntry (Entry NoId NoId)
+  | ReqSaveNewEntry (Entry NoId MbId)
   | ReqUpdateEntry (Entry HasId MbId)
+  | CancelEditor
   | AddOrReplaceEntries [Entry HasId HasId]
   | ReplaceAllEntries [Entry HasId HasId]
+  | LoadMore EntryId
   | ServerError
 
 -- How to handle inserting a new Entry under an established filter?
@@ -72,15 +76,24 @@ applyEvent ev m =
     ReqUpdateEntry _ ->
       m { editorStatus = WaitingForServer }
 
+    CancelEditor ->
+      m { editorStatus = NotEditing }
+
     ServerError ->
       m { editorStatus = NotEditing }
 
     AddOrReplaceEntries es ->
       m { editorStatus = NotEditing
         , entries = L.foldl' (\em e -> M.insert (entryId e) e em) (entries m) es
+        , waitingForMore = False
         }
 
     ReplaceAllEntries es ->
       m { editorStatus = NotEditing
         , entries = M.fromList $ (entryId &&& id) <$> es
+        , waitingForMore = False
+        }
+
+    LoadMore _ ->
+      m { waitingForMore = True
         }

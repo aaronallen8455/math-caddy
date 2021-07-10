@@ -17,6 +17,7 @@ library
                , modern-uri
                , containers
                , bytestring
+               , time
   exposed-modules:
     Frontend
   other-modules:
@@ -25,6 +26,15 @@ library
     Frontend.Model.Entries
     Frontend.Model.Filter
     Frontend.Routing
+    Frontend.Widget.BodyEditor
+    Frontend.Widget.CatSelector
+    Frontend.Widget.Checkbox
+    Frontend.Widget.DropDown
+    Frontend.Widget.EntryList
+    Frontend.Widget.EntryEditor
+    Frontend.Widget.MainPage
+    Frontend.Widget.SideMenu
+    Frontend.Widget.TextEntry
   ghc-options: -Wall -Wredundant-constraints -Wincomplete-uni-patterns -Wincomplete-record-updates -O -fno-show-valid-hole-fits
   default-extensions:
     LambdaCase

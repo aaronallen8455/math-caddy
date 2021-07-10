@@ -1,10 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
-
+{-# LANGUAGE RecursiveDo #-}
 module Frontend where
 
-import qualified Data.Text as T
 import qualified Text.URI as URI
 
 import           Obelisk.Frontend
@@ -15,10 +14,10 @@ import           Obelisk.Generated.Static
 import           Reflex.Dom.Core
 
 import           Common.Route
+import           Frontend.Async (asyncEvents)
 import qualified Frontend.Model as Model
 import           Frontend.Routing
-
--- MathJax.typeset()
+import           Frontend.Widget.MainPage (mainPage)
 
 -- This runs in a monad that can be run on the client or the server.
 -- To run code in a pure client or pure server context, use one of the
@@ -49,13 +48,35 @@ frontend = Frontend
       case mInitVals of
         Nothing -> error "Initialization failed"
         Just (baseUri, checkedEncoder, initUri) ->
-          prerender_ blank $ do
---             initModelEv <- fmap (uncurry Model.Replace) . fmapMaybe id
---                        <$> (getAndDecode . (initUri <$) =<< now)
--- 
---             modelDyn <- fmap (traceDyn "...") . foldDyn Model.applyEvent Model.empty $
---               leftmost [ initModelEv ]
+          prerender_ blank $ mdo
+            initModelEv <- fmap (uncurry Model.mkReplaceEv) . fmapMaybe id
+                       <$> (getAndDecode . (initUri <$) =<< now)
 
-            --dynText $ T.pack . show <$> modelDyn
+            uiEv <- mainPage modelDyn
+
+            modelDyn <- foldDyn Model.applyEvents Model.initModel $
+              fmap pure initModelEv <> fmap pure uiEv <> asyncEv
+
+            -- TODO build filter dyn separately to avoid this use of holdUniqDyn?
+            -- Without holdUniq this would fire on every update to modelDyn, right?
+            filterChangeEv <- do
+              filterDyn <- holdUniqDyn $ Model.modelFilter <$> modelDyn
+              pure $ Model.ReqFilterChange <$> updated filterDyn
+
+            asyncEv <- asyncEvents baseUri checkedEncoder
+                     $ leftmost [uiEv, filterChangeEv]
+
+            -- need to typeset whenever the list of entries changes
+
             pure ()
   }
+
+      --prerender_ blank $ liftJSM $ void $ eval ("console.log('Hello, World!')" :: T.Text)
+-- MathJax.typeset()
+-- How to be sure that this fires after the entries portion of the UI has been
+-- updated? Will it be good enough to hook into knowing when the entries map
+-- changes? I doubt that corresponds to the UI having been updated.
+-- What if the call was placed in the do block after the entries widget is
+-- produced, does that mean it will occur every time that widget is redrawn?
+-- Perhaps best way to proceed is to put console logs in various places to see
+-- where and when certain things happen.

@@ -10,11 +10,11 @@ import qualified Data.List as L
 import           Common.Api
 
 data M =
-  M { filterCategory :: [CategoryId]
-    , filterEntryType :: [EntryType]
-    , filterNeedle :: Maybe Needle
-    , filterLowerBound :: Maybe EntryId
-    } deriving Show
+  M { filterCategory :: ![CategoryId]
+    , filterEntryType :: ![EntryType]
+    , filterNeedle :: !(Maybe Needle)
+    , filterLowerBound :: !(Maybe EntryId)
+    } deriving (Show, Eq)
 
 initModel :: M
 initModel =
@@ -30,7 +30,6 @@ data Ev
   | AddEntryType EntryType
   | RemoveEntryType EntryType
   | SetNeedle (Maybe Needle)
-  | SetLowerBound (Maybe EntryId)
 
 applyEvent :: Ev -> M -> M
 applyEvent ev m = case ev of
@@ -39,4 +38,3 @@ applyEvent ev m = case ev of
   AddEntryType t -> m { filterEntryType = t : filterEntryType m }
   RemoveEntryType t -> m { filterEntryType = L.delete t (filterEntryType m) }
   SetNeedle n -> m { filterNeedle = n }
-  SetLowerBound b -> m { filterLowerBound = b }

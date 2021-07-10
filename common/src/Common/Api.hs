@@ -22,6 +22,7 @@ module Common.Api
   , entryTypeToText
   , PageSize
   , Needle
+  , categoryMbId
   ) where
 
 import           Data.Aeson
@@ -124,6 +125,9 @@ partitionCats = foldr go ([], []) where
     case categoryId cat of
       Nothing -> (h, cat { categoryId = () } : m)
       Just i  -> (cat { categoryId = i } : h, m)
+
+categoryMbId :: Category HasId -> Category MbId
+categoryMbId cat = cat { categoryId = Just $ categoryId cat }
 
 deriving anyclass instance
   (ToJSON (IdField k CategoryId)) => ToJSON (Category k)

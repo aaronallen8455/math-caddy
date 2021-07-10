@@ -109,6 +109,7 @@ p.entry-body {
   border-radius: 5px;
   background-color: #ffffff96;
   padding: 5px;
+  white-space: pre;
 }
 
 div.entry-field {

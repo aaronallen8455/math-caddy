@@ -6,6 +6,7 @@ module Frontend.Async
 
 import           Control.Monad
 import           Control.Monad.IO.Class (liftIO)
+import           Data.Maybe
 import           Language.Javascript.JSaddle.Types (MonadJSM)
 import           Text.URI (URI)
 import qualified Text.URI as URI
@@ -16,6 +17,7 @@ import           Common.Api
 import           Common.Route
 import qualified Frontend.Model as Model
 import qualified Frontend.Model.Entries as Entries
+import qualified Frontend.Model.Filter as Filter
 import           Frontend.Routing
 
 asyncEvents
@@ -36,28 +38,23 @@ reqSpecForEvent baseUri enc = \case
   -- this cannot change the filter, otherwise a feedback loop will occur
   Model.ReqFilterChange f -> do
     uri <- getFilteredEntriesUri baseUri enc f
+
     let xhrReq = xhrRequest "GET" (URI.render uri) def
         handler resp =
           case decodeXhrResponse resp of
             Nothing -> [Model.FilterReqFailed]
-            Just entries ->
-              [Model.EntriesEv (Entries.ReplaceAllEntries entries)]
-
-    pure (MkSomeXhrReq xhrReq, handler)
-
-  Model.ReqMoreEntries f -> do
-    uri <- getFilteredEntriesUri baseUri enc f
-    let xhrReq = xhrRequest "GET" (URI.render uri) def
-        handler resp =
-          case decodeXhrResponse resp of
-            Nothing -> [Model.FilterReqFailed]
-            Just entries ->
-              [Model.EntriesEv (Entries.AddOrReplaceEntries entries)]
+            Just entries
+              | isJust (Filter.filterLowerBound f) ->
+                  -- Having a lower bound means we are requesting more entries
+                  [Model.EntriesEv (Entries.AddOrReplaceEntries entries)]
+              | otherwise ->
+                  [Model.EntriesEv (Entries.ReplaceAllEntries entries)]
 
     pure (MkSomeXhrReq xhrReq, handler)
 
   Model.EntriesEv (Entries.ReqDeleteEntry eId) -> do
     uri <- getDeleteEntryUri baseUri enc eId
+
     let xhrReq = xhrRequest "GET" (URI.render uri) def
         handler resp =
           case decodeXhrResponse resp of
@@ -71,12 +68,15 @@ reqSpecForEvent baseUri enc = \case
 
   Model.EntriesEv (Entries.ReqSaveNewEntry entry) -> do
     uri <- getAddEntryUri baseUri enc
+
     let xhrReq = postJson (URI.render uri) entry
         handler resp =
           case decodeXhrResponse resp of
             Nothing -> [Model.EntriesEv Entries.ServerError]
             Just newEntry ->
-              [Model.AddCategories $ entryCategories (newEntry :: Entry HasId HasId)]
+              [Model.AddOrReplaceCategories
+                $ entryCategories (newEntry :: Entry HasId HasId)
+              ]
 
     pure (MkSomeXhrReq xhrReq, handler)
 
@@ -88,7 +88,7 @@ reqSpecForEvent baseUri enc = \case
           case decodeXhrResponse resp of
             Nothing -> [Model.EntriesEv Entries.ServerError]
             Just newEntry ->
-              [ Model.AddCategories $ entryCategories newEntry
+              [ Model.AddOrReplaceCategories $ entryCategories newEntry
               , Model.EntriesEv $ Entries.AddOrReplaceEntries [newEntry]
               ]
 

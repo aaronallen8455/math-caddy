@@ -17,9 +17,9 @@ import           Data.Time (UTCTime)
 import qualified Database.SQLite.Simple as DB
 
 import           Common.Api
-import           Common.Route (Needle, PageSize)
 import           DB.Schema
 
+-- | Fetches a page worth of entries matching the given filter params
 fetchEntries :: DB.Connection
              -> Maybe EntryId
              -> PageSize
