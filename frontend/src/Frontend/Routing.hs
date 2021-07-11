@@ -20,6 +20,8 @@ import           Common.Api
 import           Common.Route
 import qualified Frontend.Model.Filter as Filter
 
+import           Debug.Trace
+
 pageSize :: PageSize
 pageSize = 20
 
@@ -46,13 +48,17 @@ getFilteredEntriesUri baseURI enc Filter.M{..} = do
                , filterEntryType
                ))))
 
-  query <- traverse (bitraverse URI.mkQueryKey (URI.mkQueryValue =<<))
+  traceShowM queryMap
+  query <- traverse (bitraverse URI.mkQueryKey (traverse URI.mkQueryValue))
                     (M.toList queryMap)
 
   pathPiece <- NE.nonEmpty =<< traverse URI.mkPathPiece path
 
+  let mkQuery (key, Just val) = URI.QueryParam key val
+      mkQuery (key, Nothing) = URI.QueryFlag key
+
   pure baseURI { URI.uriPath = Just (False, pathPiece)
-               , URI.uriQuery = uncurry URI.QueryParam <$> query
+               , URI.uriQuery = mkQuery <$> query
                }
 
 getInitUri :: URI -> CheckedFullEncoder -> Maybe URI

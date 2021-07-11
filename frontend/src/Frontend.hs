@@ -14,9 +14,9 @@ import           Obelisk.Generated.Static
 import           Reflex.Dom.Core
 
 import           Common.Route
+import qualified Frontend.Async.Ev as Async
 import           Frontend.Async (asyncEvents)
 import qualified Frontend.Model as Model
-import           Frontend.Routing
 import           Frontend.Widget.MainPage (mainPage)
 
 -- This runs in a monad that can be run on the client or the server.
@@ -42,29 +42,24 @@ frontend = Frontend
             baseUri <- mBaseURI
             checkedEnc <- either (const Nothing) Just
                         $ checkEncoder fullRouteEncoder
-            initUri <- getInitUri baseUri checkedEnc
-            pure (baseUri, checkedEnc, URI.render initUri)
+            pure (baseUri, checkedEnc)
 
       case mInitVals of
         Nothing -> error "Initialization failed"
-        Just (baseUri, checkedEncoder, initUri) ->
+        Just (baseUri, checkedEncoder) ->
           prerender_ blank $ mdo
-            initModelEv <- fmap (uncurry Model.mkReplaceEv) . fmapMaybe id
-                       <$> (getAndDecode . (initUri <$) =<< now)
+            initModelEv <- ([Async.Init] <$) <$> getPostBuild
 
             uiEv <- mainPage modelDyn
 
-            modelDyn <- foldDyn Model.applyEvents Model.initModel $
-              fmap pure initModelEv <> fmap pure uiEv <> asyncEv
+            modelAndAsyncDyn <- foldDyn Model.applyEvents (Model.initModel, []) $
+              fmap pure uiEv <> asyncResultEv
 
-            -- TODO build filter dyn separately to avoid this use of holdUniqDyn?
-            -- Without holdUniq this would fire on every update to modelDyn, right?
-            filterChangeEv <- do
-              filterDyn <- holdUniqDyn $ Model.modelFilter <$> modelDyn
-              pure $ Model.ReqFilterChange <$> updated filterDyn
+            let modelDyn = fst <$> modelAndAsyncDyn
 
-            asyncEv <- asyncEvents baseUri checkedEncoder
-                     $ leftmost [uiEv, filterChangeEv]
+            let asyncEv = traceEvent "asyncEv" $ updated (snd <$> modelAndAsyncDyn)
+            asyncResultEv <- asyncEvents baseUri checkedEncoder
+                           $ asyncEv <> initModelEv
 
             -- need to typeset whenever the list of entries changes
 
@@ -80,3 +75,8 @@ frontend = Frontend
 -- produced, does that mean it will occur every time that widget is redrawn?
 -- Perhaps best way to proceed is to put console logs in various places to see
 -- where and when certain things happen.
+--
+--
+-- Options for making filter requests:
+-- 1) Can restructure to have filter be a standalone dyn separate from model dyn
+-- 2) Have an explicit RequestFiltered event that takes a Maybe

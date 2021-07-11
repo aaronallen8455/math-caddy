@@ -31,8 +31,10 @@ entryListWidget modelDyn = do
                      (editDialogWidget <$> updated modelDyn)
 
     -- TODO deactivate button if waiting for more
-    loadMoreClick <- button "Load More"
-    let loadMoreEv = fmap (Entries.LoadMore . fst)
+    loadMoreClick <- traceEvent "loadMoreClick" <$> button "Load More"
+
+    let loadMoreEv = traceEvent "loadMoreEv"
+                   . fmap (Entries.LoadMore . fst)
                    . fmapMaybe M.lookupMax
                    $ current entriesDyn <@ loadMoreClick
 

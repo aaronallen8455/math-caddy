@@ -11,6 +11,10 @@ import           Reflex.Dom.Core
 import           Common.Api
 import           Frontend.Widget.TextEntry
 
+-- TODO
+-- Need to pipe in the current categories so that IDs get assigned to cats
+-- that have them.
+
 catSelector :: (DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix m)
             => [Category MbId] -> m (Dynamic t [Category MbId])
 catSelector initCats = mdo

@@ -8,13 +8,12 @@ import qualified Data.Text as T
 import           Reflex.Dom.Core
 
 labeledCheckbox
-  :: (DomBuilder t m, MonadSample t m)
-  => Dynamic t Bool
+  :: DomBuilder t m
+  => T.Text
   -> T.Text
-  -> T.Text
+  -> Bool
   -> m (Event t Bool)
-labeledCheckbox checkedDyn labelTxt idTxt = do
-  --initChecked <- sample $ current checkedDyn
+labeledCheckbox labelTxt idTxt checked = do
 
   let checkboxAttrs
         = ("class" =: "labeled-checkbox")
@@ -22,8 +21,7 @@ labeledCheckbox checkedDyn labelTxt idTxt = do
        <> ("id" =: idTxt)
 
       inputConfig =
-        def & inputElementConfig_initialChecked .~ False
-            & inputElementConfig_setChecked .~ updated checkedDyn
+        def & inputElementConfig_initialChecked .~ checked
             & inputElementConfig_elementConfig
               . elementConfig_initialAttributes .~ checkboxAttrs
 

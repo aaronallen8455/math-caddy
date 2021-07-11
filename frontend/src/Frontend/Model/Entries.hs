@@ -46,6 +46,7 @@ data Ev
   | ReplaceAllEntries [Entry HasId HasId]
   | LoadMore EntryId
   | ServerError
+  deriving Show
 
 -- How to handle inserting a new Entry under an established filter?
 -- Could just not try to dynamically add a new entry - entries only come from
@@ -71,7 +72,7 @@ applyEvent ev m =
       m { editorStatus = CreateNew }
 
     ReqSaveNewEntry _ ->
-      m { editorStatus = NotEditing }
+      m { editorStatus = WaitingForServer }
 
     ReqUpdateEntry _ ->
       m { editorStatus = WaitingForServer }

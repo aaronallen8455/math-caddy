@@ -1,11 +1,15 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleContexts #-}
 module Frontend.Async
-  ( asyncEvents
+  ( Ev(..)
+  , asyncEvents
   ) where
 
+import           Control.Arrow
 import           Control.Monad
 import           Control.Monad.IO.Class (liftIO)
+import           Data.Foldable
+import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Language.Javascript.JSaddle.Types (MonadJSM)
 import           Text.URI (URI)
@@ -15,6 +19,7 @@ import           Reflex.Dom.Core
 
 import           Common.Api
 import           Common.Route
+import           Frontend.Async.Ev
 import qualified Frontend.Model as Model
 import qualified Frontend.Model.Entries as Entries
 import qualified Frontend.Model.Filter as Filter
@@ -24,19 +29,20 @@ asyncEvents
   :: (TriggerEvent t m, PerformEvent t m, HasJSContext (Performable m), MonadJSM (Performable m))
   => URI
   -> CheckedFullEncoder
-  -> Event t Model.Ev
+  -> Event t [Ev]
   -> m (Event t [Model.Ev])
-asyncEvents baseUri enc =
-  performRequest . fmapMaybe (reqSpecForEvent baseUri enc)
+asyncEvents baseUri enc
+  = performRequests
+  . fmapMaybe (foldMap (fmap pure . reqSpecForEvent baseUri enc))
 
 reqSpecForEvent
   :: URI
   -> CheckedFullEncoder
-  -> Model.Ev
+  -> Ev
   -> Maybe (SomeXhrRequest, ResponseHandler)
 reqSpecForEvent baseUri enc = \case
   -- this cannot change the filter, otherwise a feedback loop will occur
-  Model.ReqFilterChange f -> do
+  RequestEntries f -> do
     uri <- getFilteredEntriesUri baseUri enc f
 
     let xhrReq = xhrRequest "GET" (URI.render uri) def
@@ -52,7 +58,7 @@ reqSpecForEvent baseUri enc = \case
 
     pure (MkSomeXhrReq xhrReq, handler)
 
-  Model.EntriesEv (Entries.ReqDeleteEntry eId) -> do
+  DeleteEntry eId -> do
     uri <- getDeleteEntryUri baseUri enc eId
 
     let xhrReq = xhrRequest "GET" (URI.render uri) def
@@ -66,7 +72,7 @@ reqSpecForEvent baseUri enc = \case
 
     pure (MkSomeXhrReq xhrReq, handler)
 
-  Model.EntriesEv (Entries.ReqSaveNewEntry entry) -> do
+  SaveNewEntry entry -> do
     uri <- getAddEntryUri baseUri enc
 
     let xhrReq = postJson (URI.render uri) entry
@@ -80,7 +86,7 @@ reqSpecForEvent baseUri enc = \case
 
     pure (MkSomeXhrReq xhrReq, handler)
 
-  Model.EntriesEv (Entries.ReqUpdateEntry entry) -> do
+  UpdateEntry entry -> do
     uri <- getUpdateEntryUri baseUri enc
 
     let xhrReq = postJson (URI.render uri) entry
@@ -94,17 +100,35 @@ reqSpecForEvent baseUri enc = \case
 
     pure (MkSomeXhrReq xhrReq, handler)
 
-  _ -> Nothing
+  Init -> do
+    uri <- getInitUri baseUri enc
+
+    let xhrReq = xhrRequest "GET" (URI.render uri) def
+        handler resp =
+          case decodeXhrResponse resp of
+            Nothing -> error "could not initialize!"
+            Just (entries, cats) ->
+              [ Model.Replace Entries.M
+                  { Entries.entries = M.fromList $ (entryId &&& id) <$> entries
+                  , Entries.editorStatus = Entries.NotEditing
+                  , Entries.waitingForMore = False
+                  }
+                  cats
+              ]
+
+    pure (MkSomeXhrReq xhrReq, handler)
 
 type ResponseHandler = XhrResponse -> [Model.Ev]
 
-performRequest
+performRequests
   :: (TriggerEvent t m, PerformEvent t m, HasJSContext (Performable m), MonadJSM (Performable m))
-  => Event t (SomeXhrRequest, ResponseHandler)
+  => Event t [(SomeXhrRequest, ResponseHandler)]
   -> m (Event t [Model.Ev])
-performRequest ev = performEventAsync $ ffor ev $
-  \(MkSomeXhrReq r, handler) cb ->
-    void . newXMLHttpRequest r $ liftIO . cb . handler
+performRequests evs = performEventAsync $ ffor evs $
+  \pairs cb ->
+    for_ pairs $
+      \(MkSomeXhrReq r, handler) ->
+        void . newXMLHttpRequest r $ liftIO . cb . handler
 
 data SomeXhrRequest where
   MkSomeXhrReq :: IsXhrPayload a => XhrRequest a -> SomeXhrRequest

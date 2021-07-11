@@ -22,6 +22,7 @@ library
     Frontend
   other-modules:
     Frontend.Async
+    Frontend.Async.Ev
     Frontend.Model
     Frontend.Model.Entries
     Frontend.Model.Filter

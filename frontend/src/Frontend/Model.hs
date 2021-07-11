@@ -3,7 +3,6 @@ module Frontend.Model
   , Ev(..)
   , initModel
   , applyEvents
-  , mkReplaceEv
   , CategoryMap
   ) where
 
@@ -12,6 +11,7 @@ import qualified Data.List as L
 import qualified Data.Map.Strict as M
 
 import           Common.Api
+import qualified Frontend.Async.Ev as Async
 import qualified Frontend.Model.Entries as Entries
 import qualified Frontend.Model.Filter as Filter
 
@@ -35,54 +35,67 @@ data Ev
   = Replace Entries.M [Category HasId]
   | FilterEv Filter.Ev
   | EntriesEv Entries.Ev
-  | ReqFilterChange Filter.M
   | FilterReqFailed
   | RemoveCategories [CategoryId]
   | AddOrReplaceCategories [Category HasId]
+  deriving Show
 
-applyEvents :: [Ev] -> M -> M
-applyEvents evs m = foldr applyEvent m evs
+applyEvents :: [Ev] -> (M, [Async.Ev]) -> (M, [Async.Ev])
+applyEvents evs (m, _) = foldr applyEvent (m, []) evs
 
-applyEvent :: Ev -> M -> M
-applyEvent ev m = case ev of
+applyEvent :: Ev -> (M, [Async.Ev]) -> (M, [Async.Ev])
+applyEvent ev (m, asyncEvs) = case ev of
   Replace e c ->
-    m { modelEntries = e
-      , modelCategories = M.fromList $ (categoryId &&& id) <$> c
-      }
+    ( m { modelEntries = e
+        , modelCategories = M.fromList $ (categoryId &&& id) <$> c
+        }
+    , asyncEvs
+    )
 
   FilterEv fEv ->
-    m { modelFilter = Filter.applyEvent fEv $ modelFilter m }
+    let newFilter = Filter.applyEvent fEv $ modelFilter m
+     in ( m { modelFilter = Filter.applyEvent fEv $ modelFilter m }
+        -- Request entries for any filter event
+        , Async.RequestEntries newFilter : asyncEvs
+        )
 
   EntriesEv eEv ->
-    let m' = case eEv of
-               -- changing the lowerBound will trigger loading more
-               Entries.LoadMore eId ->
-                 m { modelFilter = (modelFilter m)
-                       { Filter.filterLowerBound = Just eId }
-                   }
-               _ -> m
+    let (m', asyncEvs') = case eEv of
+          Entries.LoadMore eId ->
+            let newFilter = (modelFilter m)
+                  { Filter.filterLowerBound = Just eId }
 
-     in m' { modelEntries = Entries.applyEvent eEv $ modelEntries m' }
+             in ( m { modelFilter = newFilter }
+                , Async.RequestEntries newFilter : asyncEvs
+                )
 
-  FilterReqFailed -> m
+          Entries.ReqSaveNewEntry ent ->
+            (m, Async.SaveNewEntry ent : asyncEvs)
 
-  ReqFilterChange _ -> m
+          Entries.ReqUpdateEntry ent ->
+            (m, Async.UpdateEntry ent : asyncEvs)
+
+          Entries.ReqDeleteEntry eId ->
+            (m, Async.DeleteEntry eId : asyncEvs)
+
+          _ -> (m, asyncEvs)
+
+     in ( m' { modelEntries = Entries.applyEvent eEv $ modelEntries m' }
+        , asyncEvs'
+        )
+
+  FilterReqFailed -> (m, asyncEvs)
 
   RemoveCategories catIds ->
-    m { modelCategories =
-          L.foldl' (flip M.delete) (modelCategories m) catIds
-      }
+    ( m { modelCategories =
+            L.foldl' (flip M.delete) (modelCategories m) catIds
+        }
+    , asyncEvs
+    )
 
   AddOrReplaceCategories cats ->
-    m { modelCategories =
-          L.foldl' (\cs c -> M.insert (categoryId c) c cs) (modelCategories m) cats
-      }
-
-mkReplaceEv :: [Entry HasId HasId] -> [Category HasId] -> Ev
-mkReplaceEv entries = Replace entM
-  where
-    entM = Entries.M
-      { Entries.entries = M.fromList $ (entryId &&& id) <$> entries
-      , Entries.editorStatus = Entries.NotEditing
-      , Entries.waitingForMore = False
-      }
+    ( m { modelCategories =
+            L.foldl' (\cs c -> M.insert (categoryId c) c cs) (modelCategories m) cats
+        }
+    , asyncEvs
+    )

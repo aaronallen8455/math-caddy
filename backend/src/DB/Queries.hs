@@ -31,7 +31,7 @@ fetchEntries conn mLowerBound pageSize mNeedle catIds types = do
   let catWhere = buildWhereInClause "CategoryId" catIds
       assocQuery =
         "SELECT EntryId, CategoryId FROM " <> entryToCatTable
-          <> catWhere <> " WHERE EntryId > ? ORDER BY EntryId ASC"
+          <> catWhere <> " AND EntryId > ? ORDER BY EntryId ASC"
 
   entryToCatAssocs
     <- DB.query conn assocQuery
@@ -49,7 +49,7 @@ fetchEntries conn mLowerBound pageSize mNeedle catIds types = do
       then pure []
       else do
         let entryWhere =
-              if null catIds
+              if null entryIds
                  then ""
                  else buildWhereInClause "Id" entryIds
 
@@ -116,7 +116,7 @@ mkEntry catToBodyMap entryToCatMap
 buildWhereInClause :: DB.Query -> [a] -> DB.Query
 buildWhereInClause colName xs =
   if null xs
-     then ""
+     then " WHERE TRUE"
      else mconcat $
           " WHERE " <> colName <> " IN ("
           : L.intersperse "," (replicate (length xs) "?")
@@ -154,13 +154,14 @@ insertEntry conn entry = do
 
 insertMultipleCats :: DB.Connection -> [Category NoId] -> IO [Category HasId]
 insertMultipleCats conn newCats = do
-  DB.executeMany conn ("INSERT INTO " <> categoriesTable <> " (Name) VALUES (?)")
+  DB.executeMany conn ("INSERT OR IGNORE INTO " <> categoriesTable <> " (Name) VALUES (?)")
     $ DB.Only . categoryName <$> newCats
 
   lastCatId <- DB.lastInsertRowId conn
+  numInserted <- DB.changes conn
 
   let newCatIds = CategoryId
-        <$> [lastCatId - (fromIntegral (length newCats) - 1)
+        <$> [lastCatId - (fromIntegral numInserted - 1)
             .. lastCatId
             ]
 

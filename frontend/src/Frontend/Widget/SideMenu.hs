@@ -34,7 +34,7 @@ sideMenuWidget catMapDyn filterDyn =
       catFilterEv <- fmap (Model.FilterEv . snd) . fmapMaybe M.lookupMin <$>
         listViewWithKey
           catMapDyn
-          (\_ catDyn -> catCheckbox filterDyn =<< sample (current catDyn))
+          (\_ catDyn -> switchHold never =<< dyn (catCheckbox filterDyn <$> catDyn))
 
       void . el "h3" $ text "Types"
 
@@ -49,7 +49,7 @@ sideMenuWidget catMapDyn filterDyn =
         ]
 
 catCheckbox
-  :: (DomBuilder t m, MonadSample t m)
+  :: (DomBuilder t m, PostBuild t m, MonadHold t m)
   => Dynamic t Filter.M
   -> Category HasId
   -> m (Event t Filter.Ev)
@@ -63,13 +63,13 @@ catCheckbox filterDyn cat =
         idTxt = (<> "-category-input")
               . T.toLower $ categoryName cat
 
-    checkedEv <- labeledCheckbox isCheckedDyn title idTxt
-    pure $ bool (Filter.AddCategory catId)
-                (Filter.RemoveCategory catId)
+    checkedEv <- dyn (labeledCheckbox title idTxt <$> isCheckedDyn) >>= switchHold never
+    pure $ bool (Filter.RemoveCategory catId)
+                (Filter.AddCategory catId)
       <$> checkedEv
 
 typeCheckbox
-  :: (DomBuilder t m, MonadSample t m)
+  :: (DomBuilder t m, PostBuild t m, MonadHold t m)
   => Dynamic t Filter.M
   -> EntryType
   -> m (Event t Filter.Ev)
@@ -82,7 +82,8 @@ typeCheckbox filterDyn entType =
         idTxt = (<> "-type-input")
               . T.toLower $ entryTypeToText entType
 
-    checkedEv <- labeledCheckbox isCheckedDyn title idTxt
-    pure $ bool (Filter.AddEntryType entType)
-                (Filter.RemoveEntryType entType)
+    checkedEv <-
+      dyn (labeledCheckbox title idTxt <$> isCheckedDyn) >>= switchHold never
+    pure $ bool (Filter.RemoveEntryType entType)
+                (Filter.AddEntryType entType)
       <$> checkedEv
