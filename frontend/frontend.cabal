@@ -23,6 +23,7 @@ library
   other-modules:
     Frontend.Async
     Frontend.Async.Ev
+    Frontend.MathJax
     Frontend.Model
     Frontend.Model.Entries
     Frontend.Model.Filter

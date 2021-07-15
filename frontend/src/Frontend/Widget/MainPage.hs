@@ -4,8 +4,8 @@ module Frontend.Widget.MainPage
   ) where
 
 import           Control.Monad.Fix
-import           Control.Monad.IO.Class
 import           Data.Text as T
+import           Language.Javascript.JSaddle.Types (MonadJSM)
 
 import           Reflex.Dom.Core
 
@@ -16,7 +16,7 @@ import           Frontend.Widget.SideMenu
 import           Frontend.Widget.TextEntry
 
 mainPage
-  :: (DomBuilder t m, PostBuild t m, MonadIO (Performable m), PerformEvent t m, MonadHold t m, MonadFix m)
+  :: (DomBuilder t m, PerformEvent t m, TriggerEvent t m, MonadJSM (Performable m), PostBuild t m, MonadHold t m, MonadFix m)
   => Dynamic t Model.M -> m (Event t Model.Ev)
 mainPage modelDyn = do
   filterEv
@@ -29,6 +29,7 @@ mainPage modelDyn = do
 
   entriesEv <- fmap Model.EntriesEv
            <$> entryListWidget (Model.modelEntries <$> modelDyn)
+                               (Model.modelCategories <$> modelDyn)
 
   sideMenuEv <-
     sideMenuWidget

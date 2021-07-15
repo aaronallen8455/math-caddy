@@ -16,6 +16,7 @@ import           Reflex.Dom.Core
 import           Common.Route
 import qualified Frontend.Async.Ev as Async
 import           Frontend.Async (asyncEvents)
+import           Frontend.MathJax (typesetMathJax)
 import qualified Frontend.Model as Model
 import           Frontend.Widget.MainPage (mainPage)
 
@@ -52,15 +53,18 @@ frontend = Frontend
 
             uiEv <- mainPage modelDyn
 
-            modelAndAsyncDyn <- foldDyn Model.applyEvents (Model.initModel, []) $
-              fmap pure uiEv <> asyncResultEv
+            (modelDyn, asyncDyn) <- fmap splitDynPure
+              . foldDyn Model.applyEvents (Model.initModel, [])
+              $ fmap pure uiEv <> asyncResultEv
 
-            let modelDyn = fst <$> modelAndAsyncDyn
-
-            let asyncEv = traceEvent "asyncEv" $ updated (snd <$> modelAndAsyncDyn)
-            asyncResultEv <- asyncEvents baseUri checkedEncoder
+            let asyncEv = ffilter (not . null) $ updated asyncDyn
+            asyncResultEv <- fmap (ffilter $ not . null)
+                           . asyncEvents baseUri checkedEncoder
                            $ asyncEv <> initModelEv
 
+            delayedAsyncEv <- delay 0.1 asyncResultEv
+            -- TODO be more selective about which events trigger typeset
+            performEvent_ (typesetMathJax <$ delayedAsyncEv)
             -- need to typeset whenever the list of entries changes
 
             pure ()

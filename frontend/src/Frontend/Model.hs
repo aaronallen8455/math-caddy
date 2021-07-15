@@ -54,7 +54,7 @@ applyEvent ev (m, asyncEvs) = case ev of
 
   FilterEv fEv ->
     let newFilter = Filter.applyEvent fEv $ modelFilter m
-     in ( m { modelFilter = Filter.applyEvent fEv $ modelFilter m }
+     in ( m { modelFilter = newFilter }
         -- Request entries for any filter event
         , Async.RequestEntries newFilter : asyncEvs
         )

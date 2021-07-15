@@ -5,20 +5,21 @@ module Frontend.Widget.EntryList
   ) where
 
 import           Control.Monad.Fix
-import           Control.Monad.IO.Class
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
+import           Language.Javascript.JSaddle.Types (MonadJSM)
 
 import           Reflex.Dom.Core
 
 import           Common.Api
+import qualified Frontend.Model as Model
 import qualified Frontend.Model.Entries as Entries
 import           Frontend.Widget.EntryEditor
 
 entryListWidget
-  :: (DomBuilder t m, PostBuild t m, MonadIO (Performable m), PerformEvent t m, MonadHold t m, MonadFix m)
-  => Dynamic t Entries.M -> m (Event t Entries.Ev)
-entryListWidget modelDyn = do
+  :: (DomBuilder t m, PerformEvent t m, TriggerEvent t m, MonadJSM (Performable m), PostBuild t m, MonadHold t m, MonadFix m)
+  => Dynamic t Entries.M -> Dynamic t Model.CategoryMap -> m (Event t Entries.Ev)
+entryListWidget modelDyn catMapDyn = do
   divClass "entries" $ do
     let entriesDyn = Entries.entries <$> modelDyn
 
@@ -28,19 +29,18 @@ entryListWidget modelDyn = do
 
     editorEvents <- switchDyn
       <$> widgetHold (pure never)
-                     (editDialogWidget <$> updated modelDyn)
+                     (editDialogWidget <$> current catMapDyn <@> updated modelDyn)
 
     -- TODO deactivate button if waiting for more
-    loadMoreClick <- traceEvent "loadMoreClick" <$> button "Load More"
+    loadMoreClick <- button "Load More"
 
-    let loadMoreEv = traceEvent "loadMoreEv"
-                   . fmap (Entries.LoadMore . fst)
+    let loadMoreEv = fmap (Entries.LoadMore . fst)
                    . fmapMaybe M.lookupMax
                    $ current entriesDyn <@ loadMoreClick
 
     pure $ leftmost [editorEvents, entryEvents, loadMoreEv]
 
-entryWidget :: (DomBuilder t m, PostBuild t m)
+entryWidget :: (DomBuilder t m, PostBuild t m, MonadFix m, MonadHold t m)
             => Dynamic t (Entry HasId HasId) -> m (Event t Entries.Ev)
 entryWidget entryDyn = do
   elDynClass "div" (entryTypeClass . entryType <$> entryDyn) $ do
@@ -56,12 +56,19 @@ entryWidget entryDyn = do
       elClass' "div" "entry-delete" $ text "✖"
 
     let deleteClick' =
-          (Entries.DeleteEntry . entryId <$> current entryDyn)
+          (Entries.ReqDeleteEntry . entryId <$> current entryDyn)
             <@ deleteClick
 
     el "h4" $ dynText (entryName <$> entryDyn)
 
-    elClass "p" "entry-body" $ dynText (entryBody <$> entryDyn)
+    -- let maths = MathJax.startup.document.getMathItemsWithin(document.body)
+    -- maths.forEach(x => x.removeFromDocument);
+    bodyDyn <- holdUniqDyn $ entryBody <$> entryDyn
+    -- need to entangle the entire element with the dyn so that mathjax doesn't
+    -- create duplicate typesetting.
+    widgetHold_
+      (elClass "p" "entry-body" $ dynText bodyDyn)
+      (elClass "p" "entry-body" . text <$> updated bodyDyn)
 
     entryField "Type" (entryTypeToText . entryType <$> entryDyn)
     entryField "Categories" (categoryListTxt <$> entryDyn)

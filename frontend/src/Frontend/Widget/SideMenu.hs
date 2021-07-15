@@ -31,10 +31,12 @@ sideMenuWidget catMapDyn filterDyn =
 
       void . el "h3" $ text "Categories"
 
-      catFilterEv <- fmap (Model.FilterEv . snd) . fmapMaybe M.lookupMin <$>
-        listViewWithKey
-          catMapDyn
-          (\_ catDyn -> switchHold never =<< dyn (catCheckbox filterDyn <$> catDyn))
+      catFilterEv
+        <- fmap (Model.FilterEv . snd)
+         . fmapMaybe M.lookupMin
+       <$> listViewWithKey
+             catMapDyn
+             (\_ catDyn -> switchHold never =<< dyn (catCheckbox filterDyn <$> catDyn))
 
       void . el "h3" $ text "Types"
 
@@ -63,7 +65,9 @@ catCheckbox filterDyn cat =
         idTxt = (<> "-category-input")
               . T.toLower $ categoryName cat
 
-    checkedEv <- dyn (labeledCheckbox title idTxt <$> isCheckedDyn) >>= switchHold never
+    checkedEv <- dyn (labeledCheckbox title idTxt <$> isCheckedDyn)
+                   >>= switchHold never
+
     pure $ bool (Filter.RemoveCategory catId)
                 (Filter.AddCategory catId)
       <$> checkedEv
@@ -83,7 +87,9 @@ typeCheckbox filterDyn entType =
               . T.toLower $ entryTypeToText entType
 
     checkedEv <-
-      dyn (labeledCheckbox title idTxt <$> isCheckedDyn) >>= switchHold never
+      dyn (labeledCheckbox title idTxt <$> isCheckedDyn)
+            >>= switchHold never
+
     pure $ bool (Filter.RemoveEntryType entType)
                 (Filter.AddEntryType entType)
       <$> checkedEv

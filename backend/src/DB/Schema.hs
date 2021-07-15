@@ -43,3 +43,5 @@ createTablesIfNotExist =
          \FOREIGN KEY(EntryId) REFERENCES entries(Id) ON DELETE CASCADE, \
          \FOREIGN KEY(CategoryId) REFERENCES categories(Id) ON DELETE CASCADE, \
          \UNIQUE (EntryId, CategoryId))"
+
+    DB.execute_ conn "PRAGMA foreign_keys = ON"

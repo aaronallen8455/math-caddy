@@ -182,8 +182,9 @@ deleteEntry conn entryId = do
                   ) (DB.Only entryId)
 
   DB.withTransaction conn $ do
-    -- associations are auto deleted by foreign key cascading
+    -- associations are auto deleted by foreign key cascading. Except that foreign keys don't work.
     DB.execute conn ("DELETE FROM " <> entriesTable <> " WHERE Id = ?") (DB.Only entryId)
+    DB.execute conn ("DELETE FROM " <> entryToCatTable <> " WHERE EntryId = ?") (DB.Only entryId)
 
     -- check if any of the cats are no longer referenced
     let whereCond = buildWhereInClause "CategoryId" catIds
@@ -217,7 +218,7 @@ updateEntry conn entry@Entry{..} = do
 
     -- update the entry
     DB.execute conn
-      "UPDATE entry SET Name = ?, Body = ?, Refs = ?, Type = ? WHERE Id = ?"
+      ("UPDATE " <> entriesTable <> " SET Name = ?, Body = ?, Refs = ?, Type = ? WHERE Id = ?")
       (entryName, entryBody, entryReferences, entryType, entryId)
 
     pure entry

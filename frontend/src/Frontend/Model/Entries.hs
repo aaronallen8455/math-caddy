@@ -78,10 +78,14 @@ applyEvent ev m =
       m { editorStatus = WaitingForServer }
 
     CancelEditor ->
-      m { editorStatus = NotEditing }
+      m { editorStatus = NotEditing
+        , waitingForMore = False
+        }
 
     ServerError ->
-      m { editorStatus = NotEditing }
+      m { editorStatus = NotEditing
+        , waitingForMore = False
+        }
 
     AddOrReplaceEntries es ->
       m { editorStatus = NotEditing

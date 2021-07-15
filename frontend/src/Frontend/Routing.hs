@@ -20,8 +20,6 @@ import           Common.Api
 import           Common.Route
 import qualified Frontend.Model.Filter as Filter
 
-import           Debug.Trace
-
 pageSize :: PageSize
 pageSize = 20
 
@@ -48,7 +46,6 @@ getFilteredEntriesUri baseURI enc Filter.M{..} = do
                , filterEntryType
                ))))
 
-  traceShowM queryMap
   query <- traverse (bitraverse URI.mkQueryKey (traverse URI.mkQueryValue))
                     (M.toList queryMap)
 

@@ -4,23 +4,24 @@ module Frontend.Widget.CatSelector
   ) where
 
 import           Control.Monad.Fix
+import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 
 import           Reflex.Dom.Core
 
 import           Common.Api
+import qualified Frontend.Model as Model
 import           Frontend.Widget.TextEntry
 
--- TODO
--- Need to pipe in the current categories so that IDs get assigned to cats
--- that have them.
-
 catSelector :: (DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix m)
-            => [Category MbId] -> m (Dynamic t [Category MbId])
-catSelector initCats = mdo
+            => Model.CategoryMap -> [Category MbId] -> m (Dynamic t [Category MbId])
+catSelector catMap initCats = mdo
+  let idLookup = M.fromList $ do
+        cat <- M.elems catMap
+        pure (categoryName cat, categoryId cat)
   catDyn <-
     foldDynMaybe
-      applyEv
+      (applyEv idLookup)
       initCats
       (leftmost [newEv, deleteEv])
 
@@ -47,14 +48,14 @@ data CatEv
   = AddCat T.Text
   | DeleteCat T.Text
 
-applyEv :: CatEv -> [Category MbId] -> Maybe [Category MbId]
-applyEv ev cats =
+applyEv :: M.Map T.Text CategoryId -> CatEv -> [Category MbId] -> Maybe [Category MbId]
+applyEv idLookup ev cats =
   case ev of
     AddCat newCat ->
       if newCat `elem` (categoryName <$> cats)
          then Nothing
          else Just $ Category
-                       { categoryId   = Nothing
+                       { categoryId   = idLookup M.!? newCat
                        , categoryName = newCat
                        } : cats
     DeleteCat delCat ->
