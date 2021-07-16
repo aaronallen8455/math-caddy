@@ -13,21 +13,21 @@ labeledCheckbox
   -> T.Text
   -> Bool
   -> m (Event t Bool)
-labeledCheckbox labelTxt idTxt checked = do
+labeledCheckbox labelTxt idTxt checked =
+  divClass "labeled-checkbox-wrapper" $ do
+    let checkboxAttrs
+          = ("class" =: "labeled-checkbox")
+         <> ("type" =: "checkbox")
+         <> ("id" =: idTxt)
 
-  let checkboxAttrs
-        = ("class" =: "labeled-checkbox")
-       <> ("type" =: "checkbox")
-       <> ("id" =: idTxt)
+        inputConfig =
+          def & inputElementConfig_initialChecked .~ checked
+              & inputElementConfig_elementConfig
+                . elementConfig_initialAttributes .~ checkboxAttrs
 
-      inputConfig =
-        def & inputElementConfig_initialChecked .~ checked
-            & inputElementConfig_elementConfig
-              . elementConfig_initialAttributes .~ checkboxAttrs
+    box <- inputElement inputConfig
 
-  box <- inputElement inputConfig
+    let labelAttrs = "for" =: idTxt
+    void . elAttr "label" labelAttrs $ text labelTxt
 
-  let labelAttrs = "for" =: idTxt
-  void . elAttr "label" labelAttrs $ text labelTxt
-
-  pure . updated $ _inputElement_checked box
+    pure . updated $ _inputElement_checked box

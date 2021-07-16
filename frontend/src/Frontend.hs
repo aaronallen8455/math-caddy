@@ -69,18 +69,3 @@ frontend = Frontend
 
             pure ()
   }
-
-      --prerender_ blank $ liftJSM $ void $ eval ("console.log('Hello, World!')" :: T.Text)
--- MathJax.typeset()
--- How to be sure that this fires after the entries portion of the UI has been
--- updated? Will it be good enough to hook into knowing when the entries map
--- changes? I doubt that corresponds to the UI having been updated.
--- What if the call was placed in the do block after the entries widget is
--- produced, does that mean it will occur every time that widget is redrawn?
--- Perhaps best way to proceed is to put console logs in various places to see
--- where and when certain things happen.
---
---
--- Options for making filter requests:
--- 1) Can restructure to have filter be a standalone dyn separate from model dyn
--- 2) Have an explicit RequestFiltered event that takes a Maybe

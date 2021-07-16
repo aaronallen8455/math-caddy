@@ -10,4 +10,4 @@ import           Language.Javascript.JSaddle (MonadJSM, eval, liftJSM)
 typesetMathJax :: MonadJSM m => m ()
 typesetMathJax =
   void . liftJSM $
-    eval ("window.MathJax !== undefined && MathJax.typeset();" :: T.Text)
+    eval ("window.MathJax !== undefined && MathJax.typeset() && MathJax.typesetClear();" :: T.Text)

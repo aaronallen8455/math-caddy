@@ -6,6 +6,7 @@ module Frontend.Widget.EntryEditor
 import           Control.Monad.Fix
 import           Control.Monad.IO.Class
 import qualified Data.Map.Strict as M
+import qualified Data.Text as T
 import           Data.Time
 import           Language.Javascript.JSaddle.Types (MonadJSM)
 
@@ -33,16 +34,28 @@ editorWidget
   :: (DomBuilder t m, PostBuild t m, MonadJSM (Performable m), TriggerEvent t m, PerformEvent t m, MonadHold t m, MonadFix m)
   => Model.CategoryMap -> Maybe (Entry HasId HasId) -> m (Event t Entries.Ev)
 editorWidget catMap mbEntry = do
-  divClass "entry-editor-backdrop" blank
-  divClass "entry-editor" $ do
-    nameDyn <- basicTextEntry "Name" (entryName <$> mbEntry)
-    -- TODO need special widget for this
-    bodyDyn <- bodyEditor (foldMap entryBody mbEntry)
-    refsDyn <- basicTextEntry "References" (entryReferences <$> mbEntry)
+  divClass "entry-editor-backdrop modal-overlay" blank
+  divClass "entry-editor modal" $ do
 
-    catsDyn <- catSelector catMap (foldMap (map categoryMbId . entryCategories) mbEntry)
+    nameDyn <- divClass "entry-editor-field" $ do
+      el "label" $ text "Name"
+      basicTextEntry "Name" (entryName <$> mbEntry)
 
-    typeDyn <- dropDown (maybe Theorem entryType mbEntry) [minBound ..]
+    bodyDyn <- divClass "entry-editor-field" $ do
+      el "label" $ text "Body"
+      bodyEditor (foldMap entryBody mbEntry)
+
+    refsDyn <- divClass "entry-editor-field" $ do
+      el "label" $ text "References"
+      basicTextEntry "References" (entryReferences <$> mbEntry)
+
+    catsDyn <- divClass "entry-editor-field" $ do
+      el "label" $ text "Categories"
+      catSelector catMap (foldMap (map categoryMbId . entryCategories) mbEntry)
+
+    typeDyn <- divClass "entry-editor-field" $ do
+      el "label" $ text "Type"
+      dropDown (maybe Theorem entryType mbEntry) [minBound ..]
 
     timeEv <- performEvent $ liftIO getCurrentTime
                 <$ leftmost
@@ -66,7 +79,16 @@ editorWidget catMap mbEntry = do
             <*> typeDyn
             <*> timeDyn
 
-    saveClickEv <- button "Save"
+    let saveDynAttrs =
+          ffor entryDyn $ \entry ->
+            if entryIsValid entry
+               then mempty
+               else "disabled" =: ""
+
+    saveClickEv
+      <- domEvent Click . fst
+      <$> elDynAttr' "button" saveDynAttrs (text "Save")
+
     let saveEv = (mkSaveEv <$> current entryDyn) <@ saveClickEv
 
     cancelEv <- (Entries.CancelEditor <$) <$> button "Cancel"
@@ -76,6 +98,12 @@ editorWidget catMap mbEntry = do
       , cancelEv
       ]
 
+entryIsValid :: Entry a b -> Bool
+entryIsValid entry =
+  and [ not . null $ entryCategories entry
+      , not . T.null . T.strip $ entryName entry
+      , not . T.null . T.strip $ entryBody entry
+      ]
 
 mkSaveEv :: Entry MbId MbId -> Entries.Ev
 mkSaveEv entry =
